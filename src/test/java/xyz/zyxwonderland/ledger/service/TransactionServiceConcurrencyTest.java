@@ -65,7 +65,7 @@ class TransactionServiceConcurrencyTest extends AbstractIntegrationTest {
 
         try {
             List<Future<?>> futures = IntStream.range(0, THREAD_COUNT)
-                    .mapToObj(i -> pool.submit(() -> {
+                    .<Future<?>>mapToObj(i -> pool.submit(() -> {
                         awaitUninterruptibly(latch);
                         transactionService.submit(transfer("concurrent-distinct-" + i, amountPerTransaction));
                     }))

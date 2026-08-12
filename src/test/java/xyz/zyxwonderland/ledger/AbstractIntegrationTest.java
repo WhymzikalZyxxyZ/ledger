@@ -17,7 +17,7 @@ import org.testcontainers.utility.DockerImageName;
  */
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-abstract class AbstractIntegrationTest {
+public abstract class AbstractIntegrationTest {
 
     @Container
     @ServiceConnection
