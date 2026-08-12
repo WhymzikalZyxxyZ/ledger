@@ -38,8 +38,14 @@ Same accepted tradeoff as every other free-tier dependency in this portfolio (Ov
 
 **Mitigation stance:** **Gap, not yet resolved.** Not blocking for the documentation phase, but needs an answer before this claims to model a real production ingestion API.
 
-## No message-broker-based ingestion pipeline — LOW (explicitly out of scope, not a hidden gap)
+## No message-broker-based ingestion pipeline — RESOLVED, by a companion repo (was LOW, out of scope)
 
-ADR-003 is explicit: this demonstrates exactly-once *effect* at a synchronous REST API layer, not a full asynchronous event-streaming ingestion architecture (no Kafka/SQS-equivalent). A real "real-time cash flow" system at Amex's scale almost certainly involves one.
+ADR-003 was explicit that this demonstrates exactly-once *effect* at a synchronous REST API layer, not a full asynchronous event-streaming ingestion architecture. That gap is now closed by [WIRE](https://github.com/WhymzikalZyxxyZ/wire) — a companion repo that posts to this exact API from a real Kafka-protocol broker (Redpanda), with its own idempotency/ordering/retry guarantees layered on top of LEDGER's. This entry is left in place (rather than deleted) as a record that the boundary was a deliberate scope decision at the time, not an oversight discovered later.
 
-**Mitigation stance:** accepted scope boundary for a project sized to prove the point, not replicate an entire production system. Named explicitly in the README so it reads as a deliberate scope decision, not an oversight.
+**Mitigation stance:** resolved at the portfolio level. LEDGER itself still has no built-in message-broker consumer — that capability lives in WIRE by design (see WIRE's README for why: "LEDGER proves synchronous correctness... WIRE proves the other half").
+
+## No catch-all exception handler — RESOLVED (was undocumented)
+
+A post-implementation code survey (the same pass that found gaps in WIRE) found that `ApiExceptionHandler` only mapped the four exception types the service layer explicitly throws. Anything else — a `DataIntegrityViolationException` that wasn't the idempotency-key case `TransactionService` already handles, a `NullPointerException`, any other unexpected failure — fell through to Spring Boot's default error response instead of this API's consistent `ErrorResponse` shape, and risked leaking internal details (stack traces, exception class names) to the client.
+
+**Mitigation stance:** resolved. Added a `DataIntegrityViolationException` handler (409, since it means the request conflicted with existing state) and a catch-all `Exception` handler (500, generic message). Both log the full exception server-side but deliberately return only a generic message to the client — the fix closes the response-shape gap without turning internal errors into an information-disclosure surface.
