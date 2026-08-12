@@ -8,6 +8,12 @@ Everything in this repository exists to demonstrate engineering competence, not 
 
 **Mitigation stance:** the README must state this plainly, not bury it. **This system must never process real financial transactions or be represented as production-ready without a real security review, a real correctness audit beyond this project's own test suite, and almost certainly regulatory/compliance review that is entirely out of scope for a personal project.** This isn't a someday caveat — pointing this at real money without that review would be a serious problem, not a technical nitpick.
 
+## Unbounded request payloads — RESOLVED (was HIGH, found by a security audit)
+
+A dedicated security-auditor pass found that `SubmitTransactionRequest.entries` had no upper bound — combined with no authentication, a single request could carry an arbitrarily large entries list, and `TransactionWriter.applyBalanceDeltas` locks one `account_balances` row per distinct (account, currency) pair in that list, all inside one DB transaction. That's a single-request resource-exhaustion vector, not a multi-request rate-limiting concern. The same audit found `EntryRequest.amount` had no `@Digits` bound matching the DB's `NUMERIC(19,4)` column, so an over-precision amount bypassed validation and failed only at the JDBC layer as an opaque 500 instead of a proper 400; and that `name`/`idempotencyKey`/`description` had no upper bound against `TEXT` (unbounded) columns.
+
+**Mitigation stance:** resolved. Added `@Size(max = 100)` to `entries`, `@Digits(integer = 15, fraction = 4)` to `amount` (matching the DB column exactly), and `@Size(max = 255)` / `@Size(max = 2000)` to the string fields. Also added `@Pattern(regexp = "^[A-Z]{3}$")` to every `currency` field — the same audit noted the old length-only check accepted `"usd"` and `"USD"` as silently distinct currencies, a real correctness gap, not just a security one.
+
 ## Double-entry invariant enforced at the service layer, not the database layer — MEDIUM (accepted gap)
 
 Per `docs/architecture/overview.md`, the "entries sum to zero" invariant is checked in application code inside the transaction boundary, not by a Postgres `CHECK` constraint (which can't reference sibling rows) or a trigger.
