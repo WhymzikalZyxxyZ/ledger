@@ -3,8 +3,6 @@ package xyz.zyxwonderland.ledger;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
@@ -14,12 +12,22 @@ import org.testcontainers.utility.DockerImageName;
  * DataSource straight to this container; the dummy values in
  * src/test/resources/application.yml exist only so property placeholder
  * resolution doesn't fail before that wiring happens.
+ *
+ * <p>The container is started manually (singleton pattern) rather than
+ * annotated {@code @Container} under {@code @Testcontainers}: this field is
+ * static and shared via inheritance across every subclass, so a
+ * per-test-class-managed lifecycle would stop it after the first test class
+ * finishes, leaving every subsequent test class talking to a dead
+ * container. Starting it once here and never stopping it (the JVM tears it
+ * down at process exit) keeps one container alive for the whole test run.
  */
-@Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class AbstractIntegrationTest {
 
-    @Container
     @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"));
+    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"));
+
+    static {
+        postgres.start();
+    }
 }
