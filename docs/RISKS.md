@@ -14,11 +14,17 @@ Per `docs/architecture/overview.md`, the "entries sum to zero" invariant is chec
 
 **Mitigation stance:** accepted for now — the application-level check runs inside the same DB transaction as the writes, so it's still atomic with respect to what actually gets committed. **Gap:** a database-level trigger as defense-in-depth (so the invariant holds even against a future bug in application code, or a direct SQL write that bypasses the service layer) is a real hardening step not yet built. Worth doing before this is ever treated as anything more than a demonstration.
 
-## Concurrency correctness is designed but not yet proven — HIGH (tracked explicitly, not hidden)
+## Concurrency correctness is now proven by tests, not just designed — RESOLVED (was HIGH)
 
-ADR-002 and ADR-003 both make specific claims about correctness under concurrent load (no lost balance updates, no duplicate posts under concurrent identical idempotency keys). ADR-004 commits to proving these with real concurrent-execution tests against actual PostgreSQL.
+ADR-002 and ADR-003 both make specific claims about correctness under concurrent load (no lost balance updates, no duplicate posts under concurrent identical idempotency keys). ADR-004 committed to proving these with real concurrent-execution tests against actual PostgreSQL.
 
-**Mitigation stance:** **as of this documentation phase, those tests don't exist yet, because no entities/controllers exist yet either.** Until they're written and passing, treat the concurrency claims in ADR-002/003 as design intent, not verified fact. This is stated explicitly here specifically so it can't be quietly forgotten once implementation starts.
+**Mitigation stance:** **Resolved.** `TransactionServiceConcurrencyTest` fires 20 concurrent transactions at both scenarios (same account, same idempotency key) against a real Testcontainers-backed PostgreSQL instance and asserts the invariants hold. This is still a test suite, not an independent audit — see the CRITICAL entry above — but the specific concurrency claims are no longer unverified design intent.
+
+## Testcontainers substituted for Neon-branch-per-CI-run — LOW (documented divergence)
+
+ADR-004 originally scoped CI concurrency tests against a Neon branch provisioned per run. That was never wired up because this repository was built without access to a Neon account/credentials in the working environment.
+
+**Mitigation stance:** accepted, and arguably an improvement — Testcontainers needs no external account or secrets, only Docker (preinstalled on GitHub Actions hosted runners), and still runs against the real `postgres:16-alpine` engine, so the properties under test (row locking, unique constraints, isolation) are unaffected. See [ADR-004](adr/004-correctness-verification.md) for the full reasoning. Revisiting Neon branches for CI would be about matching the exact hosted-Postgres build more closely, not about correctness.
 
 ## Free-tier limits (Neon, Fly.io) — LOW
 

@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    # Dummy values only — @ServiceConnection on the Testcontainers Postgres
+    # instance overrides these with the real ephemeral container's details
+    # at runtime. These exist purely so property placeholder resolution
+    # doesn't fail before that override happens; nothing ever actually
+    # connects to this URL.
+    url: jdbc:postgresql://localhost:5432/ledger_test
+    username: test
+    password: test
