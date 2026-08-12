@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: ledger
+
+server:
+  port: 8080
+
+# No datasource is configured yet — deliberately. Wiring a real Neon Postgres
+# connection belongs with the first entities/migrations, not the skeleton.
+# See docs/adr/001-stack-and-hosting.md.
